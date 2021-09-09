@@ -1,35 +1,51 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_myinsta/pages/home_page.dart';
 import 'package:flutter_myinsta/pages/signin_page.dart';
 import 'package:flutter_myinsta/pages/signup_page.dart';
 import 'package:flutter_myinsta/pages/splash_page.dart';
+import 'package:flutter_myinsta/services/prefs_service.dart';
 
-void main() {
+
+void main() async {
+  ////
+  WidgetsFlutterBinding.ensureInitialized();
+  //await Firebase.initializeApp();
+  ////
   runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
+
+  Widget _callStartPage() {
+    return StreamBuilder<FirebaseUser>(
+      stream: FirebaseAuth.instance.onAuthStateChanged,
+      builder: (BuildContext context, snapshot) {
+        if (snapshot.hasData) {
+          Prefs.saveUserId(snapshot.data.uid);
+          return SplashPage();
+        } else {
+          Prefs.removeUserId();
+          return SignInPage();
+        }
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-
         primarySwatch: Colors.blue,
-
-        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home:SplashPage(),
+      home: _callStartPage(),
       routes: {
-        SignUpPage.id:(context)=>SignUpPage(),
-        SignInPage.id:(context)=>SignInPage(),
-        HomePage.id:(context)=>HomePage(),
+        SplashPage.id: (context) => SplashPage(),
+        SignInPage.id: (context) => SignInPage(),
+        SignUpPage.id: (context) => SignUpPage(),
+        HomePage.id: (context) => HomePage(),
       },
     );
   }
 }
-
-
-
-

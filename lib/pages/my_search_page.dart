@@ -1,145 +1,204 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_myinsta/model/user_model.dart';
+ import 'package:flutter_myinsta/models/user_model.dart';
+import 'package:flutter_myinsta/services/data_service.dart';
 
 class MySearchPage extends StatefulWidget {
-
-
   @override
   _MySearchPageState createState() => _MySearchPageState();
 }
 
 class _MySearchPageState extends State<MySearchPage> {
-  List<User> items =new List();
-  var searchController=TextEditingController();
+  var searchController = TextEditingController();
+  List<User> items = new List();
+  bool isLoading = false;
+
+
+  void _apiSearchUsers(String keyword) {
+    setState(() {
+      isLoading = true;
+    });
+    DataService.searchUsers(keyword).then((users) => {
+      _respSearchUsers(users)
+    });
+  }
+
+  void _respSearchUsers(List<User> users) {
+    if (this.mounted) {
+      setState(() {
+        isLoading = false;
+        items = users;
+      });
+    }
+  }
+
+  void _apiFollowUser(User someone) async{
+    setState(() {
+      isLoading = true;
+    });
+    await DataService.followUser(someone);
+    setState(() {
+      someone.followed = true;
+      isLoading = false;
+    });
+    DataService.storePostsToMyFeed(someone);
+  }
+
+
+
+  void _apiUnFollowUser(User someone) async{
+    setState(() {
+      isLoading = true;
+    });
+    await DataService.unFollowUser(someone);
+    setState(() {
+      someone.followed = false;
+      isLoading = false;
+    });
+    DataService.removePostsFromMyFeed(someone);
+  }
+
   @override
   void initState() {
-    // TODO: implement initState
     super.initState();
-    items.add(User(fullname: "Dilyorbek", email: "dilyor@gmail.com"));
-    items.add(User(fullname: "Dilyorbek", email: "dilyor@gmail.com"));
-    items.add(User(fullname: "Dilyorbek", email: "dilyor@gmail.com"));
-    items.add(User(fullname: "Dilyorbek", email: "dilyor@gmail.com"));
-    items.add(User(fullname: "Dilyorbek", email: "dilyor@gmail.com"));
-    items.add(User(fullname: "Dilyorbek", email: "dilyor@gmail.com"));
-    items.add(User(fullname: "Dilyorbek", email: "dilyor@gmail.com"));
-    items.add(User(fullname: "Dilyorbek", email: "dilyor@gmail.com"));
-    items.add(User(fullname: "Dilyorbek", email: "dilyor@gmail.com"));
-    items.add(User(fullname: "Dilyorbek", email: "dilyor@gmail.com"));
-    items.add(User(fullname: "Dilyorbek", email: "dilyor@gmail.com"));
+    _apiSearchUsers("");
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-
       appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Text("Search", style: TextStyle(fontSize: 25, fontFamily: "Billabong", color: Colors.black),),
         centerTitle: true,
-backgroundColor: Colors.white,
-elevation: 0,
-title: Text("Search",style: TextStyle(color: Colors.black,fontFamily: "Billabong",fontSize: 25),),
       ),
-      body:Container(
-        padding: EdgeInsets.only(left: 20,right: 20),
-        child: Column(
-          children: [
-            Container(
-              padding: EdgeInsets.only(left: 5),
-              margin: EdgeInsets.only(left: 10,right: 10),
-              decoration: BoxDecoration(
-                color: Colors.grey.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(7)
-              ),
-            height: 45,
-              child: TextField(
-                style: TextStyle(color: Colors.black87),
-                controller: searchController,
-                onChanged: (input){
-                  print(input);
-                },
+      body: Stack(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              children: [
 
-                decoration: InputDecoration(
-                  hintText: "Search",
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(fontSize: 15.0,color: Colors.grey),
-                  icon: Icon(Icons.search,color: Colors.grey,)
+                // #searchuser
+                Container(
+                  height: 45,
+                  padding: EdgeInsets.symmetric(horizontal: 10),
+                  margin: EdgeInsets.only(bottom: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                  child: TextField(
+                    controller: searchController,
+                    onChanged: (input) {
+                      print(input);
+                      _apiSearchUsers(input);
+                    },
+                    style: TextStyle(color: Colors.black87),
+                    decoration: InputDecoration(
+                      hintText: "Search",
+                      hintStyle: TextStyle(color: Colors.grey, fontSize: 15.0),
+                      border: InputBorder.none,
+                      icon: Icon(Icons.search, color: Colors.grey,),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: items.length,
-                itemBuilder: (ctx, index){
-                  return _itemOfUser(items[index]);
-                },
-              ),
-            )
-          ],
-        ),
-      )
 
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      return _itemOfUser(items[index]);
+                    },
+                  ),
+                )
+              ],
+            ),
+          ),
+
+          isLoading ? Center(child: CircularProgressIndicator()) : SizedBox.shrink(),
+        ],
+      ),
     );
   }
-  Widget _itemOfUser(User user){
+
+  Widget _itemOfUser(User user) {
     return Container(
       height: 90,
       child: Row(
         children: [
+
           Container(
             padding: EdgeInsets.all(2),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(70),
-              border: Border.all(
-                width: 1.5,
-                color: Color.fromARGB(252, 175, 69, 1),
-              )
+              borderRadius: BorderRadius.circular(50),
+              border: Border.all(width: 1.5, color: Color.fromRGBO(193, 53, 132, 1),),
             ),
-            child:ClipRRect(
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(22.5),
-              child: Image(
-                image: AssetImage("assets/images/ic_person.png"),
-                width: 45,
+              child: user.img_url.isEmpty ? Image(
+                image: AssetImage("assets/images/ic_person.webp"),
                 height: 45,
+                width: 45,
+                fit: BoxFit.cover,
+              ) : Image(
+                image: NetworkImage(user.img_url),
+                height: 45,
+                width: 45,
                 fit: BoxFit.cover,
               ),
-            ) ,
+            ),
           ),
 
           SizedBox(width: 15,),
+
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.start,
-
-
             children: [
-            Text(user.fullname,style: TextStyle(fontWeight: FontWeight.bold),),
+              Text(user.fullname, style: TextStyle(fontWeight: FontWeight.bold),),
               SizedBox(height: 3,),
-              Text(user.email,style: TextStyle(color: Colors.black54),)
+              Text(user.email, style: TextStyle(color: Colors.black54),),
             ],
           ),
+
           Expanded(
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                Container(
-                  width: 100,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(3),
-                    border: Border.all(
-                      width: 1,
-                      color: Colors.grey,
-                    )
+                GestureDetector(
+                  onTap: (){
+                    if(user.followed){
+                      _apiUnFollowUser(user);
+                    }else{
+                      _apiFollowUser(user);
+                    }
+                  },
+                  child: Container(
+                    width: 100,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(3),
+                      border: Border.all(
+                        width: 1,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    child: Center(
+                      child: user.followed ? Text("Following") : Text("Follow"),
+                    ),
                   ),
-                  child:Center(
-                    child:  Text("Folllow"),
-                  )
-                )
+                ),
+
               ],
             ),
-          )
-
+          ),
         ],
       ),
     );

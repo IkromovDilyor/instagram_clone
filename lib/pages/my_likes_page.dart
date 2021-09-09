@@ -5,56 +5,38 @@ import 'package:flutter_instaclone/models/post_model.dart';
 import 'package:flutter_instaclone/services/data_service.dart';
 import 'package:flutter_instaclone/services/util_service.dart';
 
-class MyFeedPage extends StatefulWidget {
-
-  PageController pageController;
-  MyFeedPage({this.pageController});
-
+class MyLikesPage extends StatefulWidget {
   @override
-  _MyFeedPageState createState() => _MyFeedPageState();
+  _MyLikesPageState createState() => _MyLikesPageState();
 }
 
-class _MyFeedPageState extends State<MyFeedPage> {
-  bool isLoading = false;
+class _MyLikesPageState extends State<MyLikesPage> {
   List<Post> items = new List();
+  bool isLoading = false;
 
-  void _apiLoadFeeds() {
+  void _apiLoadLikes() {
     setState(() {
       isLoading = true;
     });
-    DataService.loadFeeds().then((value) => {
-      _resLoadFeeds(value)
+    DataService.loadLikes().then((value) => {
+      _resLoadLikes(value)
     });
   }
 
-  void _resLoadFeeds(List<Post> posts) {
-    setState(() {
+  void _resLoadLikes(List<Post> posts) {
+    if (this.mounted) setState(() {
       items = posts;
       isLoading = false;
     });
   }
 
-  void _apiPostLike(Post post) async {
-    setState(() {
+  void _apiPostUnlike(Post post) {
+    if (this.mounted) setState(() {
       isLoading = true;
-    });
-
-    await DataService.likePost(post, true);
-    setState(() {
-      isLoading = false;
-      post.liked = true;
-    });
-  }
-
-  void _apiPostUnLike(Post post) async {
-    setState(() {
-      isLoading = true;
-    });
-
-    await DataService.likePost(post, false);
-    setState(() {
-      isLoading = false;
       post.liked = false;
+    });
+    DataService.likePost(post, false).then((value) => {
+      _apiLoadLikes()
     });
   }
 
@@ -66,7 +48,7 @@ class _MyFeedPageState extends State<MyFeedPage> {
         isLoading = true;
       });
       DataService.removePost(post).then((value) => {
-        _apiLoadFeeds(),
+        _apiLoadLikes(),
       });
     }
   }
@@ -74,7 +56,7 @@ class _MyFeedPageState extends State<MyFeedPage> {
   @override
   void initState() {
     super.initState();
-    _apiLoadFeeds();
+    _apiLoadLikes();
   }
 
   @override
@@ -85,26 +67,25 @@ class _MyFeedPageState extends State<MyFeedPage> {
         elevation: 0,
         backgroundColor: Colors.white,
         centerTitle: true,
-        title: Text("Instagram", style: TextStyle(color: Colors.black, fontSize: 30, fontFamily: "Billabong"),),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.camera_alt, color: Color.fromRGBO(193, 53, 132, 1),),
-            onPressed: () {
-              widget.pageController.animateToPage(2, duration: Duration(milliseconds: 200), curve: Curves.easeIn);
-            },
-          )
-        ],
+        title: Text("Likes", style: TextStyle(color: Colors.black, fontSize: 30, fontFamily: "Billabong"),),
       ),
       body: Stack(
         children: [
+          items.length > 0 ?
           ListView.builder(
             itemCount: items.length,
             itemBuilder: (ctx, index) {
               return _itemOfPost(items[index]);
             },
+          )
+          : Center(
+            child: Text("No liked posts"),
           ),
 
-          isLoading ? Center(child: CircularProgressIndicator(),) : SizedBox.shrink(),
+          isLoading ? Center(
+            child: CircularProgressIndicator(),
+          )
+              : SizedBox.shrink(),
         ],
       ),
     );
@@ -132,8 +113,8 @@ class _MyFeedPageState extends State<MyFeedPage> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(post.fullname,  style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),),
-                        Text(post.date),
+                        Text("User Name",  style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),),
+                        Text("February 10, 20:00"),
                       ],
                     ),
                   ],
@@ -150,24 +131,22 @@ class _MyFeedPageState extends State<MyFeedPage> {
             width: MediaQuery.of(context).size.width,
             height: MediaQuery.of(context).size.width,
             imageUrl: post.img_post,
-            fit: BoxFit.cover,
-            placeholder: (context, url) => Center(child: CircularProgressIndicator()),
+            placeholder: (context, url) => Center(child: CircularProgressIndicator(),),
             errorWidget: (context, url, error) => Icon(Icons.error),
+            fit: BoxFit.cover,
           ),
-
           //#like #share
           Row(
             children: [
-              IconButton(onPressed: () {
-                if(!post.liked) {
-                  _apiPostLike(post);
-                } else {
-                  _apiPostUnLike(post);
-                }
-              },
+              IconButton(
+                onPressed: () {
+                  if(post.liked) {
+                    _apiPostUnlike(post);
+                  }
+                },
                 icon: post.liked ? Icon(FontAwesome.heart, color: Colors.red,) : Icon(FontAwesome.heart_o,),
               ),
-              IconButton(onPressed: () {}, icon: Icon(Icons.share_outlined,),),
+              IconButton(onPressed: () {}, icon: Icon(FontAwesome.send,),),
             ],
           ),
 
@@ -179,12 +158,12 @@ class _MyFeedPageState extends State<MyFeedPage> {
               softWrap: true,
               overflow: TextOverflow.visible,
               text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: " ${post.caption}",
-                    style: TextStyle(color: Colors.black),
-                  )
-                ]
+                  children: [
+                    TextSpan(
+                      text: " ${post.caption}",
+                      style: TextStyle(color: Colors.black),
+                    )
+                  ]
               ),
             ),
           )
